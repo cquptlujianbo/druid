@@ -31,7 +31,7 @@ import com.alibaba.druid.sql.ast.expr.SQLNullExpr;
 import com.alibaba.druid.sql.ast.expr.SQLVariantRefExpr;
 import com.alibaba.druid.sql.ast.statement.SQLAlterTableItem;
 import com.alibaba.druid.sql.ast.statement.SQLAssignItem;
-import com.alibaba.druid.sql.ast.statement.SQLCharactorDataType;
+import com.alibaba.druid.sql.ast.statement.SQLCharacterDataType;
 import com.alibaba.druid.sql.ast.statement.SQLColumnConstraint;
 import com.alibaba.druid.sql.ast.statement.SQLColumnDefinition;
 import com.alibaba.druid.sql.ast.statement.SQLCreateTableStatement;
@@ -73,6 +73,7 @@ import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlDeleteStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlDescribeStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlExecuteStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlHelpStatement;
+import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlHintStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlInsertStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlKillStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlLoadDataInFileStatement;
@@ -311,7 +312,7 @@ public class MySqlOutputVisitor extends SQLASTOutputVisitor implements MySqlASTV
             print(" AUTO_INCREMENT");
         }
 
-        for (SQLColumnConstraint item : x.getConstaints()) {
+        for (SQLColumnConstraint item : x.getConstraints()) {
             print(' ');
             item.accept(this);
         }
@@ -343,12 +344,17 @@ public class MySqlOutputVisitor extends SQLASTOutputVisitor implements MySqlASTV
             print(")");
         }
 
-        if (Boolean.TRUE == x.getAttribute("unsigned")) {
-            print(" unsigned");
+        if (Boolean.TRUE == x.getAttribute("UNSIGNED")) {
+            print(" UNSIGNED");
+        }
+        
+        if (Boolean.TRUE == x.getAttribute("ZEROFILL")) {
+            print(" ZEROFILL");
         }
 
-        if (x instanceof SQLCharactorDataType) {
-            SQLCharactorDataType charType = (SQLCharactorDataType) x;
+
+        if (x instanceof SQLCharacterDataType) {
+            SQLCharacterDataType charType = (SQLCharacterDataType) x;
             if (charType.getCharSetName() != null) {
                 print(" CHARACTER SET ");
                 print(charType.getCharSetName());
@@ -362,7 +368,7 @@ public class MySqlOutputVisitor extends SQLASTOutputVisitor implements MySqlASTV
         return false;
     }
 
-    public boolean visit(SQLCharactorDataType x) {
+    public boolean visit(SQLCharacterDataType x) {
         print(x.getName());
         if (x.getArguments().size() > 0) {
             print("(");
@@ -491,6 +497,10 @@ public class MySqlOutputVisitor extends SQLASTOutputVisitor implements MySqlASTV
             decrementIndent();
         }
 
+        for (SQLCommentHint hint : x.getOptionHints()) {
+            print(' ');
+            hint.accept(this);
+        }
         return false;
     }
 
@@ -1111,6 +1121,14 @@ public class MySqlOutputVisitor extends SQLASTOutputVisitor implements MySqlASTV
         print("START TRANSACTION");
         if (x.isConsistentSnapshot()) {
             print(" WITH CONSISTENT SNAPSHOT");
+        }
+        
+        List<SQLCommentHint> hints = x.getHints();
+        if (hints != null && !hints.isEmpty()) {
+            print(" ");
+            for (SQLCommentHint hint : hints) {
+                hint.accept(this);
+            }
         }
 
         if (x.isBegin()) {
@@ -2124,6 +2142,14 @@ public class MySqlOutputVisitor extends SQLASTOutputVisitor implements MySqlASTV
             }
             x.getTable().accept(this);
         }
+        
+        List<SQLCommentHint> hints = x.getHints();
+        if (hints != null && !hints.isEmpty()) {
+            print(" ");
+            for (SQLCommentHint hint : hints) {
+                hint.accept(this);
+            }
+        }
 
         return false;
     }
@@ -2658,6 +2684,14 @@ public class MySqlOutputVisitor extends SQLASTOutputVisitor implements MySqlASTV
             print(' ');
             print(x.getLockType().name);
         }
+        
+        List<SQLCommentHint> hints = x.getHints();
+        if (hints != null && !hints.isEmpty()) {
+            print(" ");
+            for (SQLCommentHint hint : hints) {
+                hint.accept(this);
+            }
+        }
         return false;
     }
 
@@ -2832,7 +2866,7 @@ public class MySqlOutputVisitor extends SQLASTOutputVisitor implements MySqlASTV
 
     @Override
     public boolean visit(MysqlForeignKey x) {
-        if (x.isHasConstaint()) {
+        if (x.isHasConstraint()) {
             print("CONSTRAINT ");
             if (x.getName() != null) {
                 x.getName().accept(this);
@@ -2857,6 +2891,20 @@ public class MySqlOutputVisitor extends SQLASTOutputVisitor implements MySqlASTV
         print(" (");
         printAndAccept(x.getReferencedColumns(), ", ");
         print(")");
+        
+        if(x.getReferenceMatch() != null) {
+            print(" MATCH ");
+            print(x.getReferenceMatch().name());
+        }
+        
+        if(x.getReferenceOn()!= null) {
+            print(" ON ");
+            print(x.getReferenceOn().name());
+            print(" ");
+            if(x.getReferenceOption() != null) {
+                print(x.getReferenceOption().getText());
+            }
+        }
         return false;
     }
 
@@ -3069,6 +3117,21 @@ public class MySqlOutputVisitor extends SQLASTOutputVisitor implements MySqlASTV
     @Override
     public void endVisit(MySqlSetPasswordStatement x) {
 
+    }
+
+    @Override
+    public boolean visit(MySqlHintStatement x) {
+        List<SQLCommentHint> hints = x.getHints();
+
+        for (SQLCommentHint hint : hints) {
+            hint.accept(this);
+        }
+        return false;
+    }
+
+    @Override
+    public void endVisit(MySqlHintStatement x) {
+        
     }
 
 } //

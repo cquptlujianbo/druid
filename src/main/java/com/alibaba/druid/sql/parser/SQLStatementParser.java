@@ -41,7 +41,7 @@ import com.alibaba.druid.sql.ast.statement.SQLAssignItem;
 import com.alibaba.druid.sql.ast.statement.SQLCallStatement;
 import com.alibaba.druid.sql.ast.statement.SQLColumnDefinition;
 import com.alibaba.druid.sql.ast.statement.SQLCommentStatement;
-import com.alibaba.druid.sql.ast.statement.SQLConstaint;
+import com.alibaba.druid.sql.ast.statement.SQLConstraint;
 import com.alibaba.druid.sql.ast.statement.SQLCreateDatabaseStatement;
 import com.alibaba.druid.sql.ast.statement.SQLCreateIndexStatement;
 import com.alibaba.druid.sql.ast.statement.SQLCreateTableStatement;
@@ -84,6 +84,10 @@ import com.alibaba.druid.sql.dialect.odps.parser.OdpsSelectParser;
 public class SQLStatementParser extends SQLParser {
 
     protected SQLExprParser exprParser;
+
+    protected boolean       parseCompleteValues = true;
+
+    protected int           parseValuesSize     = 3;
 
     public SQLStatementParser(String sql){
         this(new SQLExprParser(sql));
@@ -705,7 +709,7 @@ public class SQLStatementParser extends SQLParser {
                     lexer.nextToken();
                     acceptIdentifier("NOCHECK");
                     acceptIdentifier("ADD");
-                    SQLConstaint check = this.exprParser.parseConstaint();
+                    SQLConstraint check = this.exprParser.parseConstaint();
 
                     SQLAlterTableAddConstraint addCheck = new SQLAlterTableAddConstraint();
                     addCheck.setWithNoCheck(true);
@@ -1568,5 +1572,22 @@ public class SQLStatementParser extends SQLParser {
         }
         accept(Token.RPAREN);
         return item;
+    }
+
+    
+    public boolean isParseCompleteValues() {
+        return parseCompleteValues;
+    }
+
+    public void setParseCompleteValues(boolean parseCompleteValues) {
+        this.parseCompleteValues = parseCompleteValues;
+    }
+
+    public int getParseValuesSize() {
+        return parseValuesSize;
+    }
+
+    public void setParseValuesSize(int parseValuesSize) {
+        this.parseValuesSize = parseValuesSize;
     }
 }
